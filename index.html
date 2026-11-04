@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Odpočet do 17. 5. 2027</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800&family=Hanken+Grotesk:wght@500&display=swap">
+<style>
+/* Layout: fotka přes celé pozadí, odpočet uprostřed. Číslice se zmenšují s jednotkou (dny > hodiny > minuty > sekundy). */
+:root {
+  --bg: #FFFFFF;
+  --pink: #FF2E93;
+  --pink-text: #D6136F;
+  --c1: #E0162B;
+  --c2: #F26A00;
+  --c3: #F5A300;
+  --c4: #1E9E3F;
+  --c5: #009C94;
+  --c6: #0A84E0;
+  --c7: #1B3FD8;
+  --c8: #6A22D6;
+  --c9: #B51FC4;
+  --c10: #FF2E93;
+  --display: "Big Shoulders Display", "Big Shoulders", Impact, "Arial Narrow", sans-serif;
+  --body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --u: min(calc((100vw - 84px) / 6.9), 10rem, 17vh);
+}
+
+html, body { height: 100%; margin: 0; overflow-x: hidden; }
+body {
+  box-sizing: border-box;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  row-gap: calc(var(--u) * .3);
+  background: var(--bg) url("pozadi.jpg") center 35% / cover no-repeat;
+  color: var(--pink);
+  font-family: var(--body);
+  padding-block: clamp(16px, 5vh, 48px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.timer {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: center;
+  align-items: baseline;
+  column-gap: calc(var(--u) * .24);
+  row-gap: 6px;
+  min-width: 0;
+}
+.unit { display: contents; }
+.days > * { grid-column: 1; }
+.hours > * { grid-column: 2; }
+.minutes > * { grid-column: 3; }
+.seconds > * { grid-column: 4; }
+.num {
+  grid-row: 1;
+  font-family: var(--display);
+  font-weight: 800;
+  line-height: .86;
+  letter-spacing: .04em;
+  white-space: nowrap;
+  -webkit-text-stroke: .05em var(--bg);
+  paint-order: stroke fill;
+}
+/* Pevná šířka rychle se měnících číslic, aby se čas neposouval. */
+.minutes .num span, .seconds .num span { display: inline-block; width: .44em; text-align: center; }
+.days .num { font-size: calc(var(--u) * 2.6); }
+.hours .num { font-size: calc(var(--u) * 1.6); }
+.minutes .num { font-size: calc(var(--u) * 1.05); }
+.seconds .num { font-size: calc(var(--u) * .72); }
+.label {
+  grid-row: 2;
+  justify-self: start;
+  padding: .15em .45em;
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--pink-text);
+  font-size: clamp(.8125rem, 1.5vw, 1.125rem);
+  font-weight: 500;
+  line-height: 1.2;
+}
+.motto {
+  margin: 0;
+  font-family: var(--display);
+  font-size: calc(var(--u) * 1.1);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  -webkit-text-stroke: .05em var(--bg);
+  paint-order: stroke fill;
+}
+</style>
+</head>
+<body>
+<h1 class="sr-only" id="heading">Do pondělí 17. května 2027, 8:00 zbývá</h1>
+<main class="timer" role="timer" aria-labelledby="heading">
+  <div class="unit days"><div class="num" id="days"></div><div class="label" id="days-label"></div></div>
+  <div class="unit hours"><div class="num" id="hours"></div><div class="label" id="hours-label"></div></div>
+  <div class="unit minutes"><div class="num" id="minutes"></div><div class="label" id="minutes-label"></div></div>
+  <div class="unit seconds"><div class="num" id="seconds"></div><div class="label" id="seconds-label"></div></div>
+</main>
+<p class="motto" aria-label="Do maturity"><span style="color: var(--c4)">D</span><span style="color: var(--c10)">O</span> <span style="color: var(--c2)">M</span><span style="color: var(--c7)">A</span><span style="color: var(--c3)">T</span><span style="color: var(--c9)">U</span><span style="color: var(--c5)">R</span><span style="color: var(--c1)">I</span><span style="color: var(--c8)">T</span><span style="color: var(--c6)">Y</span></p>
+
+<script>
+  // 8:00 v Praze je v květnu letní čas (UTC+2), takže odpočet sedí v každém časovém pásmu.
+  const TARGET = Date.parse('2027-05-17T08:00:00+02:00');
+
+  const $ = id => document.getElementById(id);
+  const plural = (n, one, few, many) => n === 1 ? one : n >= 2 && n <= 4 ? few : many;
+  const pad = n => String(n).padStart(2, '0');
+
+  function setNum(el, text) {
+    if (el.dataset.value === text) return;
+    el.dataset.value = text;
+    el.innerHTML = [...text].map(c => `<span>${c}</span>`).join('');
+  }
+
+  function tick() {
+    const left = Math.max(0, TARGET - Date.now());
+    const total = Math.floor(left / 1000);
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor(total / 3600) % 24;
+    const minutes = Math.floor(total / 60) % 60;
+    const seconds = total % 60;
+
+    setNum($('days'), String(days));
+    setNum($('hours'), pad(hours));
+    setNum($('minutes'), pad(minutes));
+    setNum($('seconds'), pad(seconds));
+    $('days-label').textContent = plural(days, 'den', 'dny', 'dní');
+    $('hours-label').textContent = plural(hours, 'hodina', 'hodiny', 'hodin');
+    $('minutes-label').textContent = plural(minutes, 'minuta', 'minuty', 'minut');
+    $('seconds-label').textContent = plural(seconds, 'sekunda', 'sekundy', 'sekund');
+
+    if (left) setTimeout(tick, 1000 - (Date.now() % 1000));
+  }
+
+  tick();
+</script>
+</body>
+</html>
